@@ -1,0 +1,656 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Goal Reviews</title>
+<style>
+  :root {
+    --bg: #0a0a0a;
+    --panel: #141414;
+    --panel-2: #1c1c1c;
+    --border: #2a2a2a;
+    --text: #e6e6e6;
+    --muted: #8a8a8a;
+    --accent: #00d632;
+    --accent-2: #6aa6ff;
+    --danger: #ff5252;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    padding: 24px;
+    min-height: 100vh;
+  }
+  h1 { margin: 0 0 4px 0; font-size: 28px; font-weight: 600; }
+  .subtitle { color: var(--muted); font-size: 14px; margin-bottom: 24px; }
+  .container { max-width: 760px; margin: 0 auto; }
+
+  button {
+    background: var(--panel-2);
+    color: var(--text);
+    border: 1px solid var(--border);
+    padding: 8px 14px;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 14px;
+    font-family: inherit;
+  }
+  button:hover { background: #262626; border-color: #3a3a3a; }
+  button.primary { background: var(--accent); color: #000; border-color: var(--accent); font-weight: 600; }
+  button.primary:hover { background: #00b82c; }
+  button.danger { color: var(--danger); }
+  button.danger:hover { background: #2a1414; }
+  button.small { padding: 4px 10px; font-size: 13px; }
+
+  .auth-bar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 10px 14px;
+    margin-bottom: 16px;
+    font-size: 13px;
+    flex-wrap: wrap;
+  }
+  .auth-status { color: var(--muted); }
+  .auth-status .dot {
+    display: inline-block;
+    width: 8px; height: 8px;
+    border-radius: 50%;
+    margin-right: 6px;
+    background: var(--muted);
+    vertical-align: middle;
+  }
+  .auth-status.synced .dot { background: var(--accent); }
+  .auth-status.offline .dot { background: #ffae42; }
+
+  .tabs {
+    display: flex;
+    gap: 6px;
+    margin-bottom: 20px;
+    flex-wrap: wrap;
+  }
+  .tabs button { flex: 1; min-width: 100px; }
+  .tabs button.active { background: var(--accent-2); color: #000; border-color: var(--accent-2); font-weight: 600; }
+
+  .panel {
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 18px 20px;
+    margin-bottom: 20px;
+  }
+  .panel h2 {
+    margin: 0 0 4px 0;
+    font-size: 18px;
+  }
+  .panel .hint { color: var(--muted); font-size: 13px; margin: 0 0 16px 0; }
+
+  .list-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 8px;
+  }
+  .list-row input[type="text"] {
+    flex: 1;
+    background: #0d0d0d;
+    color: var(--text);
+    border: 1px solid var(--border);
+    padding: 8px 10px;
+    border-radius: 6px;
+    font-family: inherit;
+    font-size: 14px;
+  }
+  .list-row input[type="text"]:focus { outline: none; border-color: var(--accent-2); }
+  .reorder-btns { display: flex; flex-direction: column; gap: 2px; }
+  .reorder-btns button { padding: 0 6px; font-size: 11px; line-height: 1.4; }
+
+  .add-row { display: flex; gap: 8px; margin-top: 12px; }
+  .add-row input[type="text"] { flex: 1; }
+
+  .empty-state { color: var(--muted); font-size: 14px; padding: 8px 0; }
+
+  .question-block { margin-bottom: 18px; }
+  .question-block label {
+    display: block;
+    font-weight: 600;
+    font-size: 15px;
+    margin-bottom: 6px;
+  }
+  textarea {
+    width: 100%;
+    min-height: 80px;
+    background: #0d0d0d;
+    color: var(--text);
+    border: 1px solid var(--border);
+    padding: 10px 12px;
+    border-radius: 6px;
+    font-family: inherit;
+    font-size: 14px;
+    resize: vertical;
+  }
+  textarea:focus { outline: none; border-color: var(--accent-2); }
+
+  .review-entry {
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    margin-bottom: 12px;
+    overflow: hidden;
+  }
+  .review-entry-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 12px 16px;
+    background: var(--panel-2);
+    cursor: pointer;
+  }
+  .review-entry-header .date { font-weight: 600; font-size: 14px; }
+  .review-entry-body {
+    padding: 14px 16px;
+    display: none;
+  }
+  .review-entry-body.open { display: block; }
+  .review-entry-body .qa { margin-bottom: 14px; }
+  .review-entry-body .qa:last-child { margin-bottom: 0; }
+  .review-entry-body .q { font-weight: 600; font-size: 13px; color: var(--accent-2); margin-bottom: 4px; }
+  .review-entry-body .a { font-size: 14px; white-space: pre-wrap; }
+  .review-entry-body .a.empty { color: var(--muted); font-style: italic; }
+  .review-entry-actions { display: flex; justify-content: flex-end; margin-top: 10px; }
+
+  .footer-actions {
+    display: flex;
+    justify-content: center;
+    gap: 8px;
+    margin-top: 8px;
+    margin-bottom: 32px;
+  }
+
+  @media (max-width: 600px) {
+    body { padding: 12px; padding-bottom: max(12px, env(safe-area-inset-bottom)); }
+    h1 { font-size: 22px; }
+    .panel { padding: 14px 16px; }
+  }
+</style>
+</head>
+<body>
+<div class="container">
+  <h1>Goal Reviews</h1>
+  <div class="subtitle">Track your goals and check in on them regularly</div>
+
+  <div class="auth-bar">
+    <span id="authStatus" class="auth-status"><span class="dot"></span>Local only — not synced</span>
+    <button id="authBtn">Sign in with Google</button>
+  </div>
+
+  <div class="tabs">
+    <button data-tab="review" onclick="showTab('review')">New Review</button>
+    <button data-tab="goals" onclick="showTab('goals')">Goals</button>
+    <button data-tab="questions" onclick="showTab('questions')">Questions</button>
+    <button data-tab="history" onclick="showTab('history')">History</button>
+  </div>
+
+  <div id="tab-review"></div>
+  <div id="tab-goals"></div>
+  <div id="tab-questions"></div>
+  <div id="tab-history"></div>
+
+  <div class="footer-actions">
+    <button onclick="exportData()">Export backup</button>
+    <button onclick="importData()">Import backup</button>
+  </div>
+</div>
+
+<script>
+const STORAGE_KEY = 'goalReviewData';
+
+function uid() {
+  return Date.now().toString(36) + '-' + Math.random().toString(36).slice(2, 8);
+}
+
+function defaultData() {
+  return {
+    goals: [],
+    questions: [
+      { id: uid(), text: "What's going well?" },
+      { id: uid(), text: "What's going poorly?" },
+      { id: uid(), text: "What do you want to focus on next?" },
+    ],
+    reviews: [],
+  };
+}
+
+function loadData() {
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY);
+    if (!raw) return defaultData();
+    const data = JSON.parse(raw);
+    if (!Array.isArray(data.goals)) data.goals = [];
+    if (!Array.isArray(data.questions)) data.questions = [];
+    if (!Array.isArray(data.reviews)) data.reviews = [];
+    return data;
+  } catch (e) {
+    console.error('load failed', e);
+    return defaultData();
+  }
+}
+
+function saveData() {
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(DATA));
+  if (typeof window.cloudPush === 'function') window.cloudPush();
+}
+
+let DATA = loadData();
+window.DATA = DATA;
+
+window.applyRemoteData = function (remote) {
+  if (!remote) return;
+  if (!Array.isArray(remote.goals)) remote.goals = [];
+  if (!Array.isArray(remote.questions)) remote.questions = [];
+  if (!Array.isArray(remote.reviews)) remote.reviews = [];
+  if (JSON.stringify(remote) === JSON.stringify(DATA)) return;
+  DATA = remote;
+  window.DATA = DATA;
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(DATA));
+  renderAll();
+};
+
+// ---------- Tabs ----------
+let activeTab = 'review';
+function showTab(tab) {
+  activeTab = tab;
+  ['review', 'goals', 'questions', 'history'].forEach(t => {
+    document.getElementById('tab-' + t).style.display = t === tab ? 'block' : 'none';
+  });
+  document.querySelectorAll('.tabs button').forEach(b => {
+    b.classList.toggle('active', b.getAttribute('data-tab') === tab);
+  });
+}
+
+// ---------- Goals ----------
+function renderGoals() {
+  const el = document.getElementById('tab-goals');
+  const rows = DATA.goals.map(g => `
+    <div class="list-row">
+      <input type="text" value="${escapeAttr(g.text)}" onchange="updateGoal('${g.id}', this.value)">
+      <button class="danger small" onclick="deleteGoal('${g.id}')">Delete</button>
+    </div>`).join('');
+  el.innerHTML = `
+    <div class="panel">
+      <h2>Goals</h2>
+      <p class="hint">A flat list of the goals you're tracking.</p>
+      ${DATA.goals.length ? rows : '<div class="empty-state">No goals yet. Add one below.</div>'}
+      <div class="add-row">
+        <input type="text" id="newGoalInput" placeholder="New goal..." onkeydown="if(event.key==='Enter') addGoal()">
+        <button class="primary" onclick="addGoal()">Add</button>
+      </div>
+    </div>`;
+}
+function addGoal() {
+  const input = document.getElementById('newGoalInput');
+  const text = input.value.trim();
+  if (!text) return;
+  DATA.goals.push({ id: uid(), text });
+  saveData();
+  renderGoals();
+}
+function updateGoal(id, text) {
+  const g = DATA.goals.find(g => g.id === id);
+  if (!g) return;
+  g.text = text;
+  saveData();
+}
+function deleteGoal(id) {
+  if (!confirm('Delete this goal?')) return;
+  DATA.goals = DATA.goals.filter(g => g.id !== id);
+  saveData();
+  renderGoals();
+}
+
+// ---------- Questions ----------
+function renderQuestions() {
+  const el = document.getElementById('tab-questions');
+  const rows = DATA.questions.map((q, i) => `
+    <div class="list-row">
+      <div class="reorder-btns">
+        <button class="small" ${i === 0 ? 'disabled' : ''} onclick="moveQuestion('${q.id}', -1)">▲</button>
+        <button class="small" ${i === DATA.questions.length - 1 ? 'disabled' : ''} onclick="moveQuestion('${q.id}', 1)">▼</button>
+      </div>
+      <input type="text" value="${escapeAttr(q.text)}" onchange="updateQuestion('${q.id}', this.value)">
+      <button class="danger small" onclick="deleteQuestion('${q.id}')">Delete</button>
+    </div>`).join('');
+  el.innerHTML = `
+    <div class="panel">
+      <h2>Review questions</h2>
+      <p class="hint">These are the questions you'll answer in each new review. Editing them doesn't change past history.</p>
+      ${DATA.questions.length ? rows : '<div class="empty-state">No questions yet. Add one below.</div>'}
+      <div class="add-row">
+        <input type="text" id="newQuestionInput" placeholder="New question..." onkeydown="if(event.key==='Enter') addQuestion()">
+        <button class="primary" onclick="addQuestion()">Add</button>
+      </div>
+    </div>`;
+}
+function addQuestion() {
+  const input = document.getElementById('newQuestionInput');
+  const text = input.value.trim();
+  if (!text) return;
+  DATA.questions.push({ id: uid(), text });
+  saveData();
+  renderQuestions();
+}
+function updateQuestion(id, text) {
+  const q = DATA.questions.find(q => q.id === id);
+  if (!q) return;
+  q.text = text;
+  saveData();
+}
+function deleteQuestion(id) {
+  if (!confirm('Delete this question?')) return;
+  DATA.questions = DATA.questions.filter(q => q.id !== id);
+  saveData();
+  renderQuestions();
+}
+function moveQuestion(id, dir) {
+  const idx = DATA.questions.findIndex(q => q.id === id);
+  const newIdx = idx + dir;
+  if (idx < 0 || newIdx < 0 || newIdx >= DATA.questions.length) return;
+  const [q] = DATA.questions.splice(idx, 1);
+  DATA.questions.splice(newIdx, 0, q);
+  saveData();
+  renderQuestions();
+}
+
+// ---------- New Review ----------
+function renderReviewForm() {
+  const el = document.getElementById('tab-review');
+  if (DATA.questions.length === 0) {
+    el.innerHTML = `<div class="panel"><h2>New review</h2><p class="hint">Add some questions in the Questions tab first.</p></div>`;
+    return;
+  }
+  const goalsSummary = DATA.goals.length
+    ? `<ul>${DATA.goals.map(g => `<li>${escapeHtml(g.text)}</li>`).join('')}</ul>`
+    : '<p class="hint">No goals set yet — add some in the Goals tab.</p>';
+  const questionBlocks = DATA.questions.map(q => `
+    <div class="question-block">
+      <label for="answer-${q.id}">${escapeHtml(q.text)}</label>
+      <textarea id="answer-${q.id}" data-question-id="${q.id}" data-question-text="${escapeAttr(q.text)}"></textarea>
+    </div>`).join('');
+  el.innerHTML = `
+    <div class="panel">
+      <h2>Your goals</h2>
+      ${goalsSummary}
+    </div>
+    <div class="panel">
+      <h2>New review</h2>
+      <p class="hint">${new Date().toLocaleDateString(undefined, { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' })}</p>
+      ${questionBlocks}
+      <button class="primary" onclick="saveReview()">Save review</button>
+    </div>`;
+}
+function saveReview() {
+  const answers = DATA.questions.map(q => {
+    const ta = document.getElementById('answer-' + q.id);
+    return { questionId: q.id, questionText: q.text, answer: ta ? ta.value : '' };
+  });
+  const hasContent = answers.some(a => a.answer.trim());
+  if (!hasContent && !confirm('All answers are empty. Save anyway?')) return;
+  DATA.reviews.push({ id: uid(), timestamp: new Date().toISOString(), answers });
+  saveData();
+  renderReviewForm();
+  renderHistory();
+  showTab('history');
+}
+
+// ---------- History ----------
+let openReviewId = null;
+function renderHistory() {
+  const el = document.getElementById('tab-history');
+  const reviews = [...DATA.reviews].sort((a, b) => b.timestamp.localeCompare(a.timestamp));
+  if (reviews.length === 0) {
+    el.innerHTML = `<div class="panel"><h2>History</h2><div class="empty-state">No reviews yet. Complete one in the New Review tab.</div></div>`;
+    return;
+  }
+  const entries = reviews.map(r => {
+    const open = r.id === openReviewId;
+    const date = new Date(r.timestamp).toLocaleString(undefined, {
+      weekday: 'short', month: 'short', day: 'numeric', year: 'numeric', hour: 'numeric', minute: '2-digit'
+    });
+    const qa = r.answers.map(a => `
+      <div class="qa">
+        <div class="q">${escapeHtml(a.questionText)}</div>
+        <div class="a ${a.answer.trim() ? '' : 'empty'}">${a.answer.trim() ? escapeHtml(a.answer) : '(no answer)'}</div>
+      </div>`).join('');
+    return `
+      <div class="review-entry">
+        <div class="review-entry-header" onclick="toggleReview('${r.id}')">
+          <span class="date">${date}</span>
+          <span>${open ? '▲' : '▼'}</span>
+        </div>
+        <div class="review-entry-body ${open ? 'open' : ''}">
+          ${qa}
+          <div class="review-entry-actions">
+            <button class="danger small" onclick="deleteReview('${r.id}')">Delete this review</button>
+          </div>
+        </div>
+      </div>`;
+  }).join('');
+  el.innerHTML = `<div class="panel"><h2>History</h2>${entries}</div>`;
+}
+function toggleReview(id) {
+  openReviewId = openReviewId === id ? null : id;
+  renderHistory();
+}
+function deleteReview(id) {
+  if (!confirm('Delete this review entry? This cannot be undone.')) return;
+  DATA.reviews = DATA.reviews.filter(r => r.id !== id);
+  saveData();
+  renderHistory();
+}
+
+// ---------- Export / Import ----------
+function exportData() {
+  const blob = new Blob([JSON.stringify(DATA, null, 2)], { type: 'application/json' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  const d = new Date();
+  const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+  a.download = `goal-reviews-${key}.json`;
+  a.click();
+  URL.revokeObjectURL(url);
+}
+function importData() {
+  const input = document.createElement('input');
+  input.type = 'file';
+  input.accept = 'application/json';
+  input.onchange = (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = ev => {
+      try {
+        const imported = JSON.parse(ev.target.result);
+        if (!Array.isArray(imported.questions) || !Array.isArray(imported.reviews)) {
+          throw new Error('Missing expected fields');
+        }
+        if (!Array.isArray(imported.goals)) imported.goals = [];
+        if (!confirm('Replace all current data with imported data?')) return;
+        DATA = imported;
+        window.DATA = DATA;
+        saveData();
+        renderAll();
+      } catch (err) {
+        alert('Import failed: ' + err.message);
+      }
+    };
+    reader.readAsText(file);
+  };
+  input.click();
+}
+
+// ---------- Helpers ----------
+function escapeHtml(str) {
+  return String(str).replace(/[&<>"']/g, c => ({
+    '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
+  }[c]));
+}
+function escapeAttr(str) {
+  return escapeHtml(str);
+}
+
+// ---------- Init ----------
+function renderAll() {
+  renderGoals();
+  renderQuestions();
+  renderReviewForm();
+  renderHistory();
+  showTab(activeTab);
+}
+renderAll();
+</script>
+
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
+import {
+  getAuth, GoogleAuthProvider,
+  signInWithPopup, signInWithRedirect, getRedirectResult,
+  signOut, onAuthStateChanged
+} from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
+import {
+  initializeFirestore,
+  persistentLocalCache, persistentMultipleTabManager,
+  doc, getDoc, setDoc, onSnapshot
+} from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+
+// Same Firebase project as the Sleep Tracker app — this is just public client
+// config, not a secret. Goal Review data lives at a different document path
+// (users/{uid}/data/goalReview) so it doesn't collide with sleep data.
+const firebaseConfig = {
+  apiKey: "AIzaSyC7pGvbpPFUmm3akofVTIshGvcj5cWHtYs",
+  authDomain: "sleep-tracker-9ba87.firebaseapp.com",
+  projectId: "sleep-tracker-9ba87",
+  storageBucket: "sleep-tracker-9ba87.firebasestorage.app",
+  messagingSenderId: "960445756820",
+  appId: "1:960445756820:web:eae60d124ed584df898b81"
+};
+
+const app = initializeApp(firebaseConfig);
+const auth = getAuth(app);
+const db = initializeFirestore(app, {
+  localCache: persistentLocalCache({ tabManager: persistentMultipleTabManager() })
+});
+const provider = new GoogleAuthProvider();
+
+let currentUser = null;
+let unsubSnapshot = null;
+let saveTimer = null;
+let suppressNextRemote = false;
+
+const statusEl = document.getElementById('authStatus');
+const btnEl = document.getElementById('authBtn');
+
+function setStatus(text, mode) {
+  statusEl.className = 'auth-status' + (mode ? ' ' + mode : '');
+  statusEl.innerHTML = `<span class="dot"></span>${text}`;
+}
+
+const isStandalone = window.matchMedia('(display-mode: standalone)').matches
+  || window.navigator.standalone === true;
+const useRedirect = isStandalone;
+
+btnEl.addEventListener('click', async () => {
+  if (currentUser) {
+    await signOut(auth);
+    return;
+  }
+  try {
+    if (useRedirect) {
+      await signInWithRedirect(auth, provider);
+    } else {
+      await signInWithPopup(auth, provider);
+    }
+  } catch (e) {
+    console.error(e);
+    alert('Sign-in failed: ' + e.message);
+  }
+});
+
+getRedirectResult(auth).catch((e) => {
+  console.error('redirect sign-in error', e);
+});
+
+function userDocRef(uid) {
+  return doc(db, 'users', uid, 'data', 'goalReview');
+}
+
+onAuthStateChanged(auth, async (user) => {
+  currentUser = user;
+  if (unsubSnapshot) { unsubSnapshot(); unsubSnapshot = null; }
+
+  if (!user) {
+    setStatus('Local only — not synced');
+    btnEl.textContent = 'Sign in with Google';
+    return;
+  }
+
+  setStatus(`Connecting as ${user.email}…`);
+  btnEl.textContent = 'Sign out';
+
+  const ref = userDocRef(user.uid);
+  try {
+    const snap = await getDoc(ref);
+    const localHasData = window.DATA && (
+      (window.DATA.goals && window.DATA.goals.length) ||
+      (window.DATA.reviews && window.DATA.reviews.length)
+    );
+
+    if (snap.exists() && snap.data().reviews && Object.keys(snap.data()).length > 0) {
+      window.applyRemoteData(snap.data());
+    } else if (localHasData) {
+      suppressNextRemote = true;
+      await setDoc(ref, window.DATA);
+    } else {
+      suppressNextRemote = true;
+      await setDoc(ref, window.DATA);
+    }
+
+    setStatus(`Synced as ${user.email}`, 'synced');
+
+    unsubSnapshot = onSnapshot(ref, (s) => {
+      if (suppressNextRemote) { suppressNextRemote = false; return; }
+      if (s.exists()) window.applyRemoteData(s.data());
+    }, (err) => {
+      console.error('snapshot error', err);
+      setStatus(`Offline — using local data`, 'offline');
+    });
+  } catch (e) {
+    console.error(e);
+    setStatus(`Offline — using local data`, 'offline');
+  }
+});
+
+window.cloudPush = function () {
+  if (!currentUser) return;
+  clearTimeout(saveTimer);
+  saveTimer = setTimeout(async () => {
+    try {
+      suppressNextRemote = true;
+      await setDoc(userDocRef(currentUser.uid), window.DATA);
+    } catch (e) {
+      console.error('cloud push failed', e);
+      suppressNextRemote = false;
+      setStatus(`Offline — changes will sync later`, 'offline');
+    }
+  }, 400);
+};
+</script>
+</body>
+</html>
