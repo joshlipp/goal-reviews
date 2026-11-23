@@ -562,9 +562,11 @@ function setStatus(text, mode) {
   statusEl.innerHTML = `<span class="dot"></span>${text}`;
 }
 
-const isStandalone = window.matchMedia('(display-mode: standalone)').matches
-  || window.navigator.standalone === true;
-const useRedirect = isStandalone;
+// GitHub Pages always sends Cross-Origin-Opener-Policy: same-origin and gives
+// no way to override it, which breaks signInWithPopup's window.closed check
+// (it misfires as auth/popup-closed-by-user). Redirect doesn't rely on that
+// check, so always use it rather than only for standalone/home-screen mode.
+const useRedirect = true;
 
 btnEl.addEventListener('click', async () => {
   if (currentUser) {
