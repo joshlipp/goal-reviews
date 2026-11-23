@@ -411,6 +411,7 @@ function saveReview() {
 
 // ---------- History ----------
 let openReviewId = null;
+let editingReviewId = null;
 function renderHistory() {
   const el = document.getElementById('tab-history');
   const reviews = [...DATA.reviews].sort((a, b) => b.timestamp.localeCompare(a.timestamp));
@@ -420,16 +421,30 @@ function renderHistory() {
   }
   const entries = reviews.map(r => {
     const open = r.id === openReviewId;
+    const editing = r.id === editingReviewId;
     const date = new Date(r.timestamp).toLocaleString(undefined, {
       weekday: 'short', month: 'short', day: 'numeric', year: 'numeric', hour: 'numeric', minute: '2-digit'
     });
-    const qa = r.answers.map(a => `
-      <div class="qa">
-        <div class="q">${escapeHtml(a.questionText)}</div>
-        <div class="a ${a.answer.trim() ? '' : 'empty'}">${a.answer.trim() ? escapeHtml(a.answer) : '(no answer)'}</div>
-      </div>`).join('');
+    const qa = editing
+      ? r.answers.map(a => `
+        <div class="qa">
+          <div class="q">${escapeHtml(a.questionText)}</div>
+          <textarea data-edit-question-id="${a.questionId}">${escapeHtml(a.answer)}</textarea>
+        </div>`).join('')
+      : r.answers.map(a => `
+        <div class="qa">
+          <div class="q">${escapeHtml(a.questionText)}</div>
+          <div class="a ${a.answer.trim() ? '' : 'empty'}">${a.answer.trim() ? escapeHtml(a.answer) : '(no answer)'}</div>
+        </div>`).join('');
+    const actions = editing
+      ? `
+          <button class="primary small" onclick="saveReviewEdit('${r.id}')">Save changes</button>
+          <button class="small" onclick="cancelReviewEdit()">Cancel</button>`
+      : `
+          <button class="small" onclick="startReviewEdit('${r.id}')">Edit</button>
+          <button class="danger small" onclick="deleteReview('${r.id}')">Delete this review</button>`;
     return `
-      <div class="review-entry">
+      <div class="review-entry" data-review-id="${r.id}">
         <div class="review-entry-header" onclick="toggleReview('${r.id}')">
           <span class="date">${date}</span>
           <span>${open ? '▲' : '▼'}</span>
@@ -437,7 +452,7 @@ function renderHistory() {
         <div class="review-entry-body ${open ? 'open' : ''}">
           ${qa}
           <div class="review-entry-actions">
-            <button class="danger small" onclick="deleteReview('${r.id}')">Delete this review</button>
+            ${actions}
           </div>
         </div>
       </div>`;
@@ -446,6 +461,28 @@ function renderHistory() {
 }
 function toggleReview(id) {
   openReviewId = openReviewId === id ? null : id;
+  if (openReviewId !== editingReviewId) editingReviewId = null;
+  renderHistory();
+}
+function startReviewEdit(id) {
+  editingReviewId = id;
+  openReviewId = id;
+  renderHistory();
+}
+function cancelReviewEdit() {
+  editingReviewId = null;
+  renderHistory();
+}
+function saveReviewEdit(id) {
+  const review = DATA.reviews.find(r => r.id === id);
+  if (!review) return;
+  const entryEl = document.querySelector(`.review-entry[data-review-id="${id}"]`);
+  review.answers.forEach(a => {
+    const ta = entryEl.querySelector(`textarea[data-edit-question-id="${a.questionId}"]`);
+    if (ta) a.answer = ta.value;
+  });
+  editingReviewId = null;
+  saveData();
   renderHistory();
 }
 function deleteReview(id) {
